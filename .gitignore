@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+.DS_Store
+
+transcripts/
+*.vtt
+*.srt
+!examples/*.srt
+*.m4a
+*.mp3
+*.webm

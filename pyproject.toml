@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "video2text"
+version = "0.1.0"
+description = "视频链接进，逐字稿出：优先抓官方字幕，无字幕则用本地 Whisper 转写。"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Frankie" }]
+keywords = ["transcript", "whisper", "asr", "subtitle", "bilibili", "youtube"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Multimedia :: Video",
+]
+dependencies = [
+    "yt-dlp",
+    "faster-whisper",
+    "imageio-ffmpeg",
+    "av",
+]
+
+[project.scripts]
+video2text = "video2text.cli:main"
+
+[tool.setuptools]
+packages = ["video2text"]
