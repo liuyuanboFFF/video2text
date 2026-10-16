@@ -1,29 +1,41 @@
-"""抓取层：元数据、字幕、音频。全部通过 yt-dlp，天然支持 1000+ 站点。"""
+"""抓取层：元数据、字幕、音频。
+
+使用 yt-dlp 的 Python API 而**不是**子进程调用——打包成独立应用后没有
+Python 解释器可供 `python -m yt_dlp` 调用，子进程方式会失效。
+"""
 from __future__ import annotations
 
 import glob
-import json
 import os
 import re
 import shutil
-import subprocess
-import sys
+
+import yt_dlp
 
 from .models import Segment, VideoMeta
 
 DEFAULT_SUB_LANGS = "zh-Hans,zh-Hant,zh-CN,zh,en"
 
+_BASE_OPTS = {
+    "quiet": True,
+    "no_warnings": True,
+    "noprogress": True,
+    "nocheckcertificate": True,
+}
 
-def run_ytdlp(args, timeout: int = 900):
-    cmd = [sys.executable, "-m", "yt_dlp", "--no-warnings"] + list(args)
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
+def get_metadata(url: str) -> VideoMeta:
+    with yt_dlp.YoutubeDL({**_BASE_OPTS, "skip_download": True}) as ydl:
+        info = ydl.extract_info(url, download=False)
+    if not info:
+        raise RuntimeError("无法获取视频元数据")
 
-def get_metadata(url: str, timeout: int = 180) -> VideoMeta:
-    r = run_ytdlp(["--dump-json", url], timeout=timeout)
-    if r.returncode != 0 or not r.stdout.strip():
-        raise RuntimeError(f"无法获取元数据：{(r.stderr or '').strip()[-400:]}")
-    info = json.loads(r.stdout.strip().splitlines()[0])
+    if "entries" in info:  # 合集 / 播放列表：取第一条
+        entries = [e for e in (info.get("entries") or []) if e]
+        if not entries:
+            raise RuntimeError("链接指向的合集为空")
+        info = entries[0]
+
     return VideoMeta(
         id=str(info.get("id") or ""),
         title=info.get("title") or "untitled",
@@ -48,27 +60,31 @@ def ensure_ffmpeg():
         return shutil.which("ffmpeg")
 
 
-def download_subtitles(url, workdir, langs: str = DEFAULT_SUB_LANGS, timeout: int = 600):
+def _lang_list(langs: str):
+    return [l.strip() for l in langs.split(",") if l.strip()]
+
+
+def download_subtitles(url: str, workdir: str, langs: str = DEFAULT_SUB_LANGS):
     """尝试下载字幕（含自动字幕）。命中返回 vtt 路径，否则 None。"""
-    run_ytdlp(
-        [
-            "--skip-download",
-            "--write-subs",
-            "--write-auto-subs",
-            "--sub-langs",
-            langs,
-            "--sub-format",
-            "vtt",
-            "-o",
-            os.path.join(workdir, "sub.%(ext)s"),
-            url,
-        ],
-        timeout=timeout,
-    )
+    opts = {
+        **_BASE_OPTS,
+        "skip_download": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": _lang_list(langs),
+        "subtitlesformat": "vtt",
+        "outtmpl": os.path.join(workdir, "sub.%(ext)s"),
+    }
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+    except Exception:
+        return None
+
     files = sorted(glob.glob(os.path.join(workdir, "*.vtt")))
     if not files:
         return None
-    order = [l.strip().lower() for l in langs.split(",") if l.strip()]
+    order = [l.lower() for l in _lang_list(langs)]
 
     def rank(path):
         name = os.path.basename(path).lower()
@@ -81,18 +97,22 @@ def download_subtitles(url, workdir, langs: str = DEFAULT_SUB_LANGS, timeout: in
     return files[0]
 
 
-def download_audio(url, workdir, timeout: int = 1800):
-    r = run_ytdlp(
-        ["-f", "bestaudio", "-o", os.path.join(workdir, "audio.%(ext)s"), url],
-        timeout=timeout,
-    )
+def download_audio(url: str, workdir: str):
+    opts = {
+        **_BASE_OPTS,
+        "format": "bestaudio",
+        "outtmpl": os.path.join(workdir, "audio.%(ext)s"),
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+
     cands = [
         c
         for c in glob.glob(os.path.join(workdir, "audio.*"))
         if not c.endswith((".part", ".ytdl"))
     ]
     if not cands:
-        raise RuntimeError(f"音频下载失败：{(r.stderr or '').strip()[-300:]}")
+        raise RuntimeError("音频下载失败")
     return max(cands, key=os.path.getsize)
 
 

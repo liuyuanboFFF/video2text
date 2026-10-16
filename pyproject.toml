@@ -25,6 +25,10 @@ dependencies = [
 
 [project.scripts]
 video2text = "video2text.cli:main"
+video2text-gui = "video2text.gui:main"
+
+[project.optional-dependencies]
+build = ["pyinstaller"]
 
 [tool.setuptools]
 packages = ["video2text"]

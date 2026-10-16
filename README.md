@@ -49,6 +49,30 @@ python -m video2text "链接"
 > **国内网络**：默认从 `hf-mirror.com` 拉取 Whisper 模型，通常不必额外处理。
 > 如果你在海外，加 `--no-hf-mirror` 走官方源。
 
+## 桌面版（双击即用）
+
+不想碰命令行的话，可以把它打包成带界面的独立应用：
+
+```bash
+pip install pyinstaller
+
+# macOS → dist/video2text.app
+PYTHON=/path/to/python3 bash packaging/build_macos.sh
+
+# Windows → dist\video2text\video2text.exe
+packaging\build_windows.bat
+```
+
+打包后是一个窗口程序：粘贴链接、选模型与格式、点「开始」，日志实时滚动，完成后一键打开输出目录。**使用者无需安装 Python。**
+
+三点限制，先知道再看值不值得：
+
+- **模型首次仍需联网下载**（medium 约 1.4 GB），之后离线可用。
+- **yt-dlp 无法自我更新**。视频站点解析规则经常变，嵌进 App 的 yt-dlp 是冻结版本，用久了可能失效，需要重新构建。
+- **必须在目标平台分别构建**，macOS 只能出 `.app`、Windows 只能出 `.exe`；体积数百 MB（含 ffmpeg 与推理库）。
+
+完整说明见 [`packaging/README.md`](packaging/README.md)。
+
 ## 用法
 
 ```bash
