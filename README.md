@@ -26,7 +26,7 @@ video2text "https://www.bilibili.com/video/BV1xx411c7mD"
 需要 Python 3.9+。**ffmpeg 不用手动装**，`imageio-ffmpeg` 会自带一份。
 
 ```bash
-git clone https://github.com/<your-name>/video2text.git
+git clone https://github.com/liuyuanboFFF/video2text.git
 cd video2text
 
 python -m venv .venv && source .venv/bin/activate
@@ -52,6 +52,10 @@ python -m video2text "链接"
 ## 桌面版（双击即用）
 
 不想碰命令行的话，可以把它打包成带界面的独立应用：
+
+**已有构建好的 macOS 版**，可直接从 [Releases](https://github.com/liuyuanboFFF/video2text/releases) 下载 `.zip`，解压后双击运行（未签名，首次打开需右键 →「打开」）。
+
+也可以自己构建：
 
 ```bash
 pip install pyinstaller
