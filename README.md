@@ -18,6 +18,7 @@ video2text "https://www.bilibili.com/video/BV1xx411c7mD"
 | **完全本地** | 转写跑在本机 CPU 上，不调用任何云端接口，不需要 API key，音视频文件用完即删。 |
 | **站点通吃** | 底层是 yt-dlp，B 站、YouTube、播客等 1000+ 站点都能用，短链（如 `b23.tv/xxx`）也能直接丢进来。 |
 | **四种输出** | Markdown（带 YAML frontmatter，Obsidian 友好）、TXT、SRT、JSON。 |
+| **中文默认简体** | Whisper 默认倾向输出繁体，这里用提示词 + OpenCC 双层处理，保证简体（也可 `--keep-traditional` 关闭）。 |
 | **不出错稿** | 转写完成后会用视频元数据做**时长硬校验**，对不上就终止——避免出现"标题是 A、内容是 B"的错稿。 |
 | **批量与并行安全** | 一次传多个链接，模型只加载一次；每个任务独立临时目录，多个进程同时跑也不会互相覆盖。 |
 
@@ -97,6 +98,12 @@ video2text "链接" -m small
 
 # 自动检测语言（非中文视频）
 video2text "链接" -l auto
+
+# 中文默认输出简体；需要繁体就别加这个开关
+video2text "链接" --keep-traditional
+
+# 术语提示：把容易听错的人名/产品名/专业词写进来（显著提升准确率）
+video2text "链接" --prompt "Chatbox AI、SKILL.md、Anthropic、MCP"
 ```
 
 ### 参数
@@ -108,6 +115,8 @@ video2text "链接" -l auto
 | `-f, --format` | `md` | 输出格式：`md` / `txt` / `srt` / `json` |
 | `-m, --model` | `medium` | Whisper 模型：`tiny` / `base` / `small` / `medium` / `large-v3` |
 | `-l, --language` | `zh` | 转写语言代码，`auto` 为自动检测 |
+| `--prompt` | 空 | 术语提示，把容易听错的专有名词写进来，能明显降低误识 |
+| `--keep-traditional` | 关 | 保留繁体（中文默认统一转简体） |
 | `--threads` | `5` | CPU 转写线程数 |
 | `--sub-langs` | `zh-Hans,zh-Hant,zh-CN,zh,en` | 字幕语言优先级，逗号分隔 |
 | `--force-asr` | 关 | 忽略字幕，一律语音识别 |
@@ -117,6 +126,15 @@ video2text "链接" -l auto
 | `--no-hf-mirror` | 关 | 不使用 hf-mirror.com |
 | `--tolerance` | `60` | 时长校验容差（秒），超出即终止 |
 | `-q, --quiet` | 关 | 减少输出 |
+
+### 中文输出为什么默认是简体
+
+Whisper 对中文的默认输出倾向**繁体**，这是模型训练数据的偏好，不是配置问题。这里做了两层处理：
+
+1. **提示词引导**：把「请使用简体中文输出」写进 `initial_prompt`，从源头把倾向掰回来；
+2. **确定性兜底**：转写后用 [OpenCC](https://github.com/BYVoid/OpenCC) 的 `tw2sp` 做一次转换——既转字形（繁→简），也换台湾用词（軟體→软件、網路→网络、資訊→信息）。
+
+另外还会修正 Whisper 中文的典型误识，比如把「么」写成「幺」（「什幺」→「什么」）。这类问题是模型固有的，加 `initial_prompt` 只能降低概率、无法根除，所以用确定性替换兜底。
 
 ## 输出示例（Markdown）
 
@@ -193,7 +211,16 @@ asr_model: "medium"
 说明抓到的音频长度和视频元数据对不上，通常是链接指向分 P、合集或已被删改。用 `--keep-temp` 保留临时文件排查，或换用完整 BV 链接（而非短链）。
 
 **中文人名 / 专名识别错了**
-这是 ASR 的固有局限，尤其生僻人名。建议成稿后通读校对——`transcript_source: whisper:*` 的稿子默认就带这句提醒。
+这是 ASR 的固有局限，尤其生僻人名。先用 `--prompt` 把已知的人名、产品名、专业词写进去，能明显改善：
+
+```bash
+video2text "链接" --prompt "Chatbox AI、SKILL.md、Anthropic、MCP、渐进式披露"
+```
+
+实测同一个视频，加术语提示后 `Skill` 的误识次数从 63 次降到个位数。但要注意：**提示词只能降低错误率，不能保证正确**。工具本身不做事实核查——它没法判断"这个地名是不是真的这么写"。人名、地名、机构名这类需要外部知识的内容，仍需人工或用大模型做一次校对。
+
+**输出是繁体**
+默认已经统一转简体了（提示词 + OpenCC 双层）。如果你看到繁体，说明 opencc 没装上：`pip install opencc-python-reimplemented`。
 
 **想要更好的断句和标点**
 换 `-m large-v3`，或对非中文内容用 `-l auto`，让模型自己判断语言。

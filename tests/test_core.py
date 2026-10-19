@@ -123,5 +123,53 @@ class TestWriters(unittest.TestCase):
         self.assertEqual(self._read("e.txt").strip(), "第一句\n第二句")
 
 
+class TestChineseSimplified(unittest.TestCase):
+    """中文输出应统一为简体——这是中文用户最直接的体验问题。"""
+
+    def test_build_prompt_without_extra(self):
+        from video2text import transcribe as tr
+
+        p = tr.build_initial_prompt(None, True)
+        self.assertIn("简体", p)
+        self.assertIn("不要使用繁体字", p)
+
+    def test_build_prompt_with_terms(self):
+        from video2text import transcribe as tr
+
+        p = tr.build_initial_prompt("Chatbox、SKILL.md", True)
+        self.assertIn("简体", p)
+        self.assertIn("Chatbox", p)
+        self.assertIn("SKILL.md", p)
+
+    def test_build_prompt_disabled(self):
+        from video2text import transcribe as tr
+
+        self.assertIsNone(tr.build_initial_prompt(None, False))
+        self.assertEqual(tr.build_initial_prompt("术语", False), "术语")
+
+    def test_convert_traditional(self):
+        from video2text import transcribe as tr
+
+        if not tr.simplified_available():
+            self.skipTest("未安装 opencc")
+        # 字形 + 台湾用词都应转成大陆简体
+        out = tr.to_simplified("這是繁體字：軟體、網路、資訊")
+        self.assertEqual(out, "这是繁体字：软件、网络、信息")
+
+    def test_convert_keeps_simplified(self):
+        from video2text import transcribe as tr
+
+        s = "这本来就是简体，不需要改动。"
+        self.assertEqual(tr.to_simplified(s), s)
+
+    def test_fix_asr_yao(self):
+        from video2text import transcribe as tr
+
+        self.assertEqual(tr.fix_common_asr_errors("什幺是Skill"), "什么是Skill")
+        self.assertEqual(tr.fix_common_asr_errors("那幺、怎幺、这幺"), "那么、怎么、这么")
+        # 真正的「幺」不能被误伤
+        self.assertEqual(tr.fix_common_asr_errors("幺鸡、幺妹"), "幺鸡、幺妹")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

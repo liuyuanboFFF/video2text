@@ -19,6 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
   video2text "链接" --force-asr            忽略字幕，强制语音识别
   video2text "链接" -m small               更快、更省内存
   video2text "链接" -l auto --no-hf-mirror 自动检测语言 + 海外网络
+  video2text "链接" --prompt "Chatbox、SKILL.md"   用术语提示纠正专有名词
+  video2text "链接" --keep-traditional     保留繁体输出
 """,
     )
     p.add_argument("urls", nargs="+", help="一个或多个视频链接（yt-dlp 支持的站点均可）")
@@ -29,6 +31,11 @@ def build_parser() -> argparse.ArgumentParser:
                    choices=["tiny", "base", "small", "medium", "large-v3"],
                    help="Whisper 模型大小（默认 medium）")
     p.add_argument("-l", "--language", default="zh", help="转写语言代码，auto 为自动检测（默认 zh）")
+    p.add_argument("--prompt", default="",
+                   help="术语提示：把容易听错的人名/产品名/专业词写进来，能显著提升识别准确率，"
+                        "例如 --prompt \"AI Agent、Chatbox、SKILL.md\"")
+    p.add_argument("--keep-traditional", action="store_true",
+                   help="保留繁体中文（默认会把中文输出统一转成简体）")
     p.add_argument("--threads", type=int, default=5, help="CPU 转写线程数（默认 5）")
     p.add_argument("--sub-langs", default=fetch.DEFAULT_SUB_LANGS,
                    help="字幕语言优先级，逗号分隔（默认 zh-Hans,zh-Hant,zh-CN,zh,en）")
@@ -60,6 +67,8 @@ def main(argv=None) -> int:
         keep_temp=args.keep_temp,
         hf_mirror=not args.no_hf_mirror,
         tolerance=args.tolerance,
+        prompt=args.prompt,
+        simplify=not args.keep_traditional,
     )
 
     def log(msg):

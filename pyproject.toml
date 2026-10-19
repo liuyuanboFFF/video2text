@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "video2text"
-version = "0.1.0"
+version = "0.1.1"
 description = "视频链接进，逐字稿出：优先抓官方字幕，无字幕则用本地 Whisper 转写。"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,6 +21,7 @@ dependencies = [
     "faster-whisper",
     "imageio-ffmpeg",
     "av",
+    "opencc-python-reimplemented",
 ]
 
 [project.scripts]

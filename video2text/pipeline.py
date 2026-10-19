@@ -25,6 +25,8 @@ class Options:
     keep_temp: bool = False
     hf_mirror: bool = True
     tolerance: int = 60
+    prompt: str = ""
+    simplify: bool = True
 
 
 class ModelHolder:
@@ -103,7 +105,13 @@ def process_one(url: str, options: Options, model_getter, log, cancel=None) -> s
             audio = fetch.download_audio(url, work)
             log("转写中（CPU int8，长视频请耐心）...")
             model = model_getter()
-            segments, info = transcribe.transcribe(model, audio, options.language)
+            segments, info = transcribe.transcribe(
+                model,
+                audio,
+                options.language,
+                prompt=options.prompt or None,
+                simplify=options.simplify,
+            )
             got = float(getattr(info, "duration", 0) or 0)
             if meta.duration and abs(got - meta.duration) > options.tolerance:
                 raise RuntimeError(
@@ -112,6 +120,11 @@ def process_one(url: str, options: Options, model_getter, log, cancel=None) -> s
                 )
             source = f"whisper:{options.model}"
             log(f"转写完成：{len(segments)} 段")
+            if options.simplify and options.language == "zh":
+                if transcribe.simplified_available():
+                    log("已统一转为简体中文（OpenCC tw2sp）")
+                else:
+                    log("提示：未安装 opencc，仅靠提示词引导简体，可能仍有个别繁体字")
 
         name = output.safe_filename(meta.title) + "." + EXT[options.format]
         path = os.path.join(options.output, name)

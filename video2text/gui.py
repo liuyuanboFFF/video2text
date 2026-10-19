@@ -63,13 +63,24 @@ class App:
                      state="readonly", width=12).grid(row=2, column=1, sticky="w",
                                                       padx=6, pady=(8, 0))
 
+        ttk.Label(opt, text="术语提示").grid(row=3, column=0, sticky="w", pady=(8, 0))
+        self.var_prompt = tk.StringVar(value="")
+        ttk.Entry(opt, textvariable=self.var_prompt).grid(row=3, column=1, columnspan=2,
+                                                          sticky="ew", padx=6, pady=(8, 0))
+        ttk.Label(opt, text="可选。容易听错的人名/产品名/专业词，如：Chatbox、SKILL.md",
+                  foreground="#777").grid(row=4, column=1, columnspan=2, sticky="w", padx=6)
+
         self.var_sub = tk.BooleanVar(value=True)
         ttk.Checkbutton(opt, text="优先使用字幕（无字幕时自动转写）",
-                        variable=self.var_sub).grid(row=3, column=1, sticky="w",
+                        variable=self.var_sub).grid(row=5, column=1, sticky="w",
                                                     padx=6, pady=(8, 0))
+        self.var_simplify = tk.BooleanVar(value=True)
+        ttk.Checkbutton(opt, text="中文统一输出简体（取消则可能保留繁体）",
+                        variable=self.var_simplify).grid(row=6, column=1, sticky="w",
+                                                         padx=6, pady=(2, 0))
         self.var_mirror = tk.BooleanVar(value=True)
         ttk.Checkbutton(opt, text="使用国内镜像下载模型（海外可取消）",
-                        variable=self.var_mirror).grid(row=4, column=1, sticky="w",
+                        variable=self.var_mirror).grid(row=7, column=1, sticky="w",
                                                        padx=6, pady=(2, 0))
 
         bar = ttk.Frame(self.root)
@@ -129,6 +140,8 @@ class App:
             model=self.var_model.get(),
             force_asr=not self.var_sub.get(),
             hf_mirror=self.var_mirror.get(),
+            prompt=self.var_prompt.get().strip(),
+            simplify=self.var_simplify.get(),
         )
         self.running = True
         self.btn_run.config(state="disabled", text="处理中…")
