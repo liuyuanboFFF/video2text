@@ -21,6 +21,12 @@ _BASE_OPTS = {
     "no_warnings": True,
     "noprogress": True,
     "nocheckcertificate": True,
+    # 站点 CDN 偶发低速（实测可低至 300KB/s 且有停顿）。yt-dlp 默认读取超时仅 20 秒，
+    # 十几 MB 的音频会频繁报 "read operation timed out"。这里放宽并加重试。
+    "socket_timeout": 60,
+    "retries": 10,
+    "fragment_retries": 10,
+    "extractor_retries": 3,
 }
 
 
@@ -100,7 +106,7 @@ def download_subtitles(url: str, workdir: str, langs: str = DEFAULT_SUB_LANGS):
 def download_audio(url: str, workdir: str):
     opts = {
         **_BASE_OPTS,
-        "format": "bestaudio",
+        "format": "bestaudio/best",
         "outtmpl": os.path.join(workdir, "audio.%(ext)s"),
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
